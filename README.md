@@ -1,18 +1,16 @@
-# Cross Domain Slot Filling with BERT
+# Cross Domain Slot Filling with Contrastive Loss
 
 * Data: [SNIPS Dataset](https://github.com/sonos/nlu-benchmark) preprocessed by [zliucr](https://github.com/zliucr/coach)
 * Download data from [here](https://drive.google.com/drive/folders/1ydalMtB-hpfS3SIEaR5UbRfEe2m8bFcj) and save it in <b>./data</b> diretory.
 
-## How to train
-* run <b>run.sh</b>
-
-## How to test (evaluation)
-* run <b>run_test_total.sh</b> or <b>run_test_seen_unseen.sh</b>
-    * Test dataset contains data which includes slot labels <b>not in source domain</b>. These data are called <i>unseen data</i>. Otherwise, the data are called <i>seen data</i>.
-    * run_test_total.sh: evaluate on test datasets <b>w/o data split</b>.
-    * run_test_seen_unseen.sh: <b>split test dataset into to sets</b>(seen dataset, unseen dataset) then evaluate on each datasets.
+## How to train & test(prediction)
+* run code below
+```python
+python main.py config.json
+```
 
 ## Options
+mostly similar as options used in huggingface arguments
 * --epoch: training epochs
 * --tgt_dm: target domain, source domain consists of domains without except target domain
 * --batch_size: batch size
