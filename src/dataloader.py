@@ -1,4 +1,4 @@
-from src.datareader import PAD_INDEX, datareader, domain2slot
+from src.datareader import PAD_INDEX, datareader
 from src.utils import make_syn_data
 
 import torch

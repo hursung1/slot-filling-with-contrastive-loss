@@ -18,7 +18,8 @@ def train(model,
             eval_steps, 
             total_steps, 
             early_stopping_patience,
-            loss_key_ratio
+            loss_key_ratio,
+            log_dict
             ):
     """
     trainer function
@@ -26,6 +27,7 @@ def train(model,
     
     """
     model.train()
+    log_dict['eval_results'] = []
 
     repeat_dataloader = repeater(dataloader_train) # for infinite loop
     pbar = tqdm(repeat_dataloader, total=total_steps, desc="Start Training")
@@ -64,6 +66,8 @@ def train(model,
             results = eval(model, dataloader_val)
             print(f"Results at step {i+1}")
             print(results)
+            results['step'] = i + 1
+            log_dict['eval_results'].append(results)
 
             eval_f1 = results['macro avg']['f1-score']
             if eval_f1 > best_f1_score:
@@ -75,6 +79,8 @@ def train(model,
                 print("Found better model!")
 
                 os.makedirs(model_save_path, exist_ok=True)
+                if os.path.isfile(model_save_path+f'best-model-parameters-step-{best_step+1}.pt'):
+                    os.remove(model_save_path+f'best-model-parameters-step-{best_step+1}.pt')
                 torch.save(model.state_dict(), model_save_path+f'best-model-parameters-step-{i+1}.pt')
                 best_f1_score = eval_f1
                 best_step = i
@@ -84,9 +90,14 @@ def train(model,
                 patience += 1
                 if patience == early_stopping_patience:
                     print(f"Early stop at step {i+1}")
+                    i += 1
                     break
 
             model.train()
+
+    log_dict['stopped_step'] = i
+    log_dict['eval_best_step'] = best_step
+    log_dict['eval_best_f1_score'] = best_f1_score
 
     return best_step, best_f1_score
 

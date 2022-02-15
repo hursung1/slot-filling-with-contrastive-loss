@@ -3,7 +3,6 @@ from src.utils import (
     slot_list,
     update_dict
 )
-from preprocess.gen_embeddings_for_slu import domain2slot, slot_list
 
 import time, random, copy
 
