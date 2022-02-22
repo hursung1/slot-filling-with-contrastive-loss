@@ -4,6 +4,9 @@ from tqdm import tqdm
 from sklearn.metrics import classification_report
 from itertools import chain, repeat
 
+from src.utils import y1_set
+from src.conll2002_metrics import conll2002_measure
+
 def repeater(dataloader): # for infinite dataloader loop
     for loader in repeat(dataloader):
         for data in loader:
@@ -63,13 +66,12 @@ def train(model,
 
         # evaluation
         if (i + 1) % eval_steps == 0:
-            results = eval(model, dataloader_val)
-            print(f"Results at step {i+1}")
-            print(results)
-            results['step'] = i + 1
-            log_dict['eval_results'].append(results)
+            result = eval(model, dataloader_val)
+            eval_f1 = result['fb1']
+            print(f"Result(F1-Score) at step {i+1}: {eval_f1}")
+            result['step'] = i + 1
+            log_dict['eval_results'].append(result)
 
-            eval_f1 = results['macro avg']['f1-score']
             if eval_f1 > best_f1_score:
                 """
                 when better evaluation f1 score is found:
@@ -140,6 +142,14 @@ def eval(model, dataloader, file=None):
         # print("Prediction: ", pred[rand])
         total_targets = list(chain.from_iterable(total_targets))
         total_preds = list(chain.from_iterable(total_preds))
-        results = classification_report(total_targets, total_preds, output_dict=True)
+        total_lines = []
+        for target, pred in zip(total_targets, total_preds):
+            bin_target = y1_set[target]
+            bin_pred = y1_set[pred]
 
-    return results
+            total_lines.append("w" + " " + bin_pred + " " + bin_target)
+
+        result = conll2002_measure(total_lines)
+        # results = classification_report(total_targets, total_preds, output_dict=True)
+
+    return result

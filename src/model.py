@@ -49,8 +49,13 @@ class SlotFillingModel(nn.Module):
         self.key_update_period = args.key_update_period
 
         # models
-        self.query_bert = BertModel.from_pretrained("bert-base-uncased")
-        self.key_bert = BertModel.from_pretrained("bert-base-uncased")
+        if args.model_name_or_path == "lstm":
+            self.query_bert = torch.nn.LSTM(input_size=input_size, hidden_size=hidden_size)
+            self.key_bert = torch.nn.LSTM(input_size=input_size, hidden_size=hidden_size)
+        elif "bert" in args.model_name_or_path:
+            self.query_bert = BertModel.from_pretrained("bert-base-uncased")
+            self.key_bert = BertModel.from_pretrained("bert-base-uncased")
+
         self.dropout = nn.Dropout(p=args.dropout_rate)
         self.classifier = nn.Linear(self.query_bert.config.hidden_size, self.num_tags)
         self.crf = CRF(self.num_tags)

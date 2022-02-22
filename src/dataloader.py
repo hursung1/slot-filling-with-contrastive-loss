@@ -188,7 +188,6 @@ def get_dataloader(tgt_domain, n_samples, data_path, num_augs, batch_size, max_t
     tokenizer: tokenizer
     """
     all_data, slot_exemplars = datareader(tgt_domain, n_samples, data_path)
-    # train_data = {"slot_utter": [], "domain": [], "label": [], "template_list": [], "slot_exemplars": {}}
     train_data = {"utter": [], "slot": [], "domain": [], "label": [], "template_list": [], "slot_exemplars": slot_exemplars}
     """
     slot_exemplars_td_only: slot exemplars included only in train domain
@@ -228,7 +227,7 @@ def get_dataloader(tgt_domain, n_samples, data_path, num_augs, batch_size, max_t
 
         # first n samples as train set
         train_data["utter"].extend(all_data[tgt_domain]["utter"][:train_split])
-        train_data["slot"].extend(all_data[tgt_domain]["utter"][:train_split])
+        train_data["slot"].extend(all_data[tgt_domain]["slot"][:train_split])
         train_data["domain"].extend([tgt_domain for _ in range(train_split)])
         train_data["label"].extend(all_data[tgt_domain]["label"][:train_split])
         train_data["template_list"].extend(all_data[tgt_domain]["template_list"][:train_split])

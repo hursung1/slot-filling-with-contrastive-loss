@@ -82,7 +82,7 @@ def log_params(json_dict, params):
     json_dict: dictionary, 
     params: list, list of params
     """
-    necessary_params = ['dataset_name', 'target_domain', 'n_samples', 'loss_key_ratio', 'dropout_rate', 'learning_rate', 'max_steps', 'eval_steps', 'early_stopping_patience', 'per_device_train_batch_size', 'warmup_steps']
+    necessary_params = ['dataset_name', 'target_domain', 'n_samples', 'num_aug_data', 'loss_key_ratio', 'dropout_rate', 'learning_rate', 'max_steps', 'eval_steps', 'early_stopping_patience', 'per_device_train_batch_size', 'warmup_steps']
     json_dict['parameters'] = {}
 
     for param in params:

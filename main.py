@@ -73,16 +73,13 @@ def main():
     # Prediction / Test
     model.load_state_dict(torch.load(model_path+f"best-model-parameters-step-{best_step+1}.pt"))
     results = eval(model, dataloader_test)
-    print("Prediction")
-    print(results)
-    print(f"F1-score {results['macro avg']['f1-score']: .2f} at prediction.")
+    print(f"F1 Score at prediction: {results['fb1']}")
 
-    log_dict['test_result'] = results
-    log_dict['test_f1_score'] = results['macro avg']['f1-score']
-
+    log_dict['test_result'] = results['fb1']
+    
     os.makedirs(log_path, exist_ok=True)
     with open(log_path + 'log.json', 'w') as json_out:
-        json.dump(log_dict, json_out)
+        json.dump(log_dict, json_out, indent=4)
 
     return 
 
