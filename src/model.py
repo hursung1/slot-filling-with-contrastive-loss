@@ -50,8 +50,10 @@ class SlotFillingModel(nn.Module):
 
         # models
         if args.model_name_or_path == "lstm":
-            self.query_bert = torch.nn.LSTM(input_size=input_size, hidden_size=hidden_size)
-            self.key_bert = torch.nn.LSTM(input_size=input_size, hidden_size=hidden_size)
+            self.query_bert_emb = torch.nn.Embedding(args.vocab_size, args.hidden_size, args.pad_token_id)
+            self.query_bert = torch.nn.LSTM(input_size=args.hidden_size, hidden_size=args.hidden_size)
+            self.key_bert_emb = torch.nn.Embedding(args.vocab_size, args.hidden_size, args.pad_token_id)
+            self.key_bert = torch.nn.LSTM(input_size=args.input_size, hidden_size=args.hidden_size)
         elif "bert" in args.model_name_or_path:
             self.query_bert = BertModel.from_pretrained("bert-base-uncased")
             self.key_bert = BertModel.from_pretrained("bert-base-uncased")

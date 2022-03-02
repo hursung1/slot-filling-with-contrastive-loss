@@ -1,4 +1,6 @@
+from curses import meta
 from dataclasses import dataclass, field
+from email.policy import default
 from typing import Optional
 
 @dataclass
@@ -28,9 +30,13 @@ class ModelArguments:
         default=0.5,
         metadata={"help": "dropout rate"}
     )
-    num_aug_data: int = field(
-        default=1, 
-        metadata={"help": "number of augmented data"}
+    key_enc_data: str = field(
+        default="tem_aug",
+        metadata={"help": "designate data for key encoder input (\"tem_only\", \"tem_aug\", \"aug_only\")"}
+    )
+    num_key_enc_data: int = field(
+        default=3,
+        metadata={"help": "number of data for key encoder input"}
     )
     loss_key_ratio: float = field(
         default=0.5,
@@ -44,6 +50,19 @@ class ModelArguments:
         default=10,
         metadata={"help": "hyperparameter period for update key encoder"}
     )
+    # for LSTM usage
+    vocab_size: int = field(
+        default=30522,
+        metadata={}
+    )
+    hidden_size: int = field(
+        default=768,
+        metadata={}
+    )
+    pad_token_id: int = field(
+        default=0
+    )
+    
 
 
 

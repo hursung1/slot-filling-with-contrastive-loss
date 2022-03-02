@@ -15,6 +15,9 @@ import time
 import json
 
 def main():
+    # # set visible gpus
+    # os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
     # parse arguments 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -41,7 +44,8 @@ def main():
                                             data_args.target_domain, 
                                             data_args.n_samples, 
                                             data_args.dataset_path, 
-                                            model_args.num_aug_data, 
+                                            model_args.key_enc_data,
+                                            model_args.num_key_enc_data,
                                             training_args.per_device_train_batch_size, 
                                             data_args.max_train_samples, 
                                             tokenizer)

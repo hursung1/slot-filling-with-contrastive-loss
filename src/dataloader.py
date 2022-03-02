@@ -1,3 +1,4 @@
+from time import time
 from src.datareader import PAD_INDEX, datareader
 from src.utils import make_syn_data
 
@@ -8,9 +9,9 @@ from torch.utils.data import DataLoader
 import random
 
 class Dataset(data.Dataset):
-    def __init__(self, tokenizer, utter, slot, domain, label, template_list=None, slot_exemplars=None, how_many_augs=3, label_pad_token_id=0):
+    def __init__(self, tokenizer, utter, slot, domain, label, template_list=None, slot_exemplars=None, key_data_type="tem_only", label_pad_token_id=0):
         """
-        how_many_augs: number of augmented data per aa utterance생성할 augmented data의 개수
+        how_many_augs: number of augmented data per a utterance생성할 augmented data의 개수
         utter: original utterance
         slot: every slots
         label: b/i/o tag for each slot label
@@ -24,8 +25,8 @@ class Dataset(data.Dataset):
         self.template_list = template_list # this contains one positive template & two negative templates for each utter
         self.label_pad_token_id = label_pad_token_id
         if self.template_list is not None:
+            self.key_data_type = key_data_type
             self.slot_exemplars = slot_exemplars
-            self.how_many_augs = how_many_augs
             self.mode = "train"
         else:
             self.mode = "eval"
@@ -35,43 +36,39 @@ class Dataset(data.Dataset):
     def __getitem__(self, index):
         item = {}
         if self.mode == "train": # dataset mode "train": make synthetic data
-            aug_data = make_syn_data(self.slot_exemplars, self.template_list[index], self.how_many_augs)
-            tem_aug_emb = []
-            prob = random.random()
-            pos_data = []
-            neg_data = []
-            # remove T- from template && tokenize
-            for i, template in enumerate(self.template_list[index]):
+            aug_data = make_syn_data(self.slot_exemplars, self.template_list[index])
+            key_input_data = []
+            
+            for i, (template, augmented) in enumerate(zip(self.template_list[index], aug_data)):
+                # remove T- from template && tokenize
                 tem_words = template.split()
                 for j, word in enumerate(tem_words):
                     if "T-" in word:
                         tem_words[j] = tem_words[j][2:]
                 
                 tem = " ".join(tem_words)
-                tem_emb = self.tokenizer(self.slot[index], tem)    
-                if i == 0:
-                    if aug_data is None:
-                        pos_data.append(tem_emb)
-                    if aug_data is not None and prob < 0.5:
-                        pos_data.append(tem_emb)
-                
-                elif i > 0:
-                    neg_data.append(tem_emb)
-            
-            # tokenize augmented data
-            if aug_data is not None:
-                for i, aug_datum in enumerate(aug_data):
-                    aug_emb = self.tokenizer(self.slot[index], aug_datum)
-                    if i == 0 and prob >= 0.5:
-                        pos_data.append(aug_emb)
-                    elif i > 0:
-                        neg_data.append(aug_emb)
+                tem_emb = self.tokenizer(self.slot[index], tem)
 
-                # Combine template embeddings and augmented data embeddings
-            tem_aug_emb.extend(pos_data)
-            tem_aug_emb.extend(neg_data)
+                # tokenize augmented data
+                aug_emb = self.tokenizer(self.slot[index], augmented)
+
+                # select template or aug_data in probability=.5
+                if self.key_data_type == "tem_aug":
+                    prob = random.random()
+                    if prob < 0.5:
+                        key_input_data.append(tem_emb)
+                    else:
+                        key_input_data.append(aug_emb)
+
+                # use only template
+                elif self.key_data_type == "tem_only":
+                    key_input_data.append(tem_emb)
+
+                # use only augmented data
+                elif self.key_data_type == "aug_only":
+                    key_input_data.append(aug_emb)
             
-            item['tem_aug_data'] = tem_aug_emb
+            item['tem_aug_data'] = key_input_data
 
         else:
             item['tem_aug_data'] = None 
@@ -178,7 +175,7 @@ def collate_fn(features):
     return padded_features
 
 
-def get_dataloader(tgt_domain, n_samples, data_path, num_augs, batch_size, max_train_samples=-1, tokenizer=None):
+def get_dataloader(tgt_domain, n_samples, data_path, key_enc_data, num_key_enc_data, batch_size, max_train_samples=-1, tokenizer=None):
     """
     input
     ----------
@@ -187,7 +184,7 @@ def get_dataloader(tgt_domain, n_samples, data_path, num_augs, batch_size, max_t
     max_train_samples: number of maximum train samples, default=-1(use all)
     tokenizer: tokenizer
     """
-    all_data, slot_exemplars = datareader(tgt_domain, n_samples, data_path)
+    all_data, slot_exemplars = datareader(tgt_domain, data_path, num_key_enc_data)
     train_data = {"utter": [], "slot": [], "domain": [], "label": [], "template_list": [], "slot_exemplars": slot_exemplars}
     """
     slot_exemplars_td_only: slot exemplars included only in train domain
@@ -195,12 +192,11 @@ def get_dataloader(tgt_domain, n_samples, data_path, num_augs, batch_size, max_t
     """
     for dm_name, dm_data in all_data.items():
         if dm_name != tgt_domain:
-            train_data["utter"].extend(dm_data["utter"])
-            train_data["slot"].extend(dm_data["slot"])
+            train_data["utter"].extend(dm_data["train"]["utter"])
+            train_data["slot"].extend(dm_data["train"]["slot"])
             train_data["domain"].append(dm_name)
-            train_data["label"].extend(dm_data["label"])
-            train_data["template_list"].extend(dm_data["template_list"])
-            # train_data["slot_exemplars"] = update_dict(train_data["slot_exemplars"], dm_data["slot_exemplars"]) # just add slot exemplars which only in train domain 
+            train_data["label"].extend(dm_data["train"]["label"])
+            train_data["template_list"].extend(dm_data["train"]["template_list"])
             
     val_data = {"utter": [], "slot": [], "domain": [], "label": []}
     test_data = {"utter": [], "slot": [], "domain": [], "label": []}
@@ -208,41 +204,69 @@ def get_dataloader(tgt_domain, n_samples, data_path, num_augs, batch_size, max_t
     val_split = 500 # use 500 data for validation
     train_split = n_samples
 
-    if n_samples == 0:
-        # first 500 samples as validation set
-        val_data["utter"] = all_data[tgt_domain]["utter"][:val_split]
-        val_data["slot"] = all_data[tgt_domain]["slot"][:val_split]
-        val_data["domain"]  = [tgt_domain for _ in range(len(val_data["utter"]))]
-        val_data["label"] = all_data[tgt_domain]["label"][:val_split]
+    # extend train data with target domain data if train_split > 0
+    train_data["utter"].extend(all_data[tgt_domain]["train"]["utter"][:train_split])
+    train_data["slot"].extend(all_data[tgt_domain]["train"]["slot"][:train_split])
+    train_data["domain"].extend([tgt_domain for _ in range(train_split)])
+    train_data["label"].extend(all_data[tgt_domain]["train"]["label"][:train_split])
+    train_data["template_list"].extend(all_data[tgt_domain]["train"]["template_list"][:train_split])
 
-        # the rest as test set
-        test_data["utter"] = all_data[tgt_domain]["utter"][val_split:]
-        test_data["slot"] = all_data[tgt_domain]["slot"][val_split:]
-        test_data["domain"] = [tgt_domain for _ in range(len(test_data["utter"]))]
-        test_data["label"] = all_data[tgt_domain]["label"][val_split:]
+    # rest: for validation and inference
+    tgt_utter = all_data[tgt_domain]["train"]["utter"][train_split:]
+    tgt_slot = all_data[tgt_domain]["train"]["slot"][train_split:]
+    tgt_label = all_data[tgt_domain]["train"]["label"][train_split:]
+    # tgt_utter.extend(all_data[tgt_domain]["val"]["utter"])
+    # tgt_slot.extend(all_data[tgt_domain]["val"]["slot"])
+    # tgt_label.extend(all_data[tgt_domain]["val"]["label"])
 
-    else: # delete slot_exemplars_td_only because some of target domain data is added in train data
-        # del train_data["slot_exemplars"]
-        # train_data["slot_exemplars"] = slot_exemplars
+    # seed = time()
 
-        # first n samples as train set
-        train_data["utter"].extend(all_data[tgt_domain]["utter"][:train_split])
-        train_data["slot"].extend(all_data[tgt_domain]["slot"][:train_split])
-        train_data["domain"].extend([tgt_domain for _ in range(train_split)])
-        train_data["label"].extend(all_data[tgt_domain]["label"][:train_split])
-        train_data["template_list"].extend(all_data[tgt_domain]["template_list"][:train_split])
+    # random.Random(seed).shuffle(tgt_utter)
+    # random.Random(seed).shuffle(tgt_slot)
+    # random.Random(seed).shuffle(tgt_label)
 
-        # from n to 500 samples as validation set
-        val_data["utter"] = all_data[tgt_domain]["utter"][train_split:val_split]  
-        val_data["slot"] = all_data[tgt_domain]["slot"][train_split:val_split]
-        val_data["domain"] = [tgt_domain for _ in range(len(val_data["utter"]))]
-        val_data["label"] = all_data[tgt_domain]["label"][train_split:val_split]
+    val_data["utter"] = tgt_utter[:val_split]
+    val_data["slot"] = tgt_slot[:val_split]
+    val_data["label"] = tgt_label[:val_split]
+    val_data["domain"] = [tgt_domain for _ in range(len(val_data["utter"]))]
 
-        # the rest as test set (same as zero-shot)
-        test_data["utter"] = all_data[tgt_domain]["utter"][val_split:]
-        test_data["slot"] = all_data[tgt_domain]["slot"][val_split:]
-        test_data["domain"] = [tgt_domain for _ in range(len(test_data["utter"]))]
-        test_data["label"] = all_data[tgt_domain]["label"][val_split:]
+    test_data["utter"] = tgt_utter[val_split:]
+    test_data["slot"] = tgt_slot[val_split:]
+    test_data["label"] = tgt_label[val_split:]
+    test_data["domain"] = [tgt_domain for _ in range(len(test_data["utter"]))]
+
+    # if n_samples == 0:
+    #     # first 500 samples as validation set
+    #     val_data["utter"] = all_data[tgt_domain]["utter"][:val_split]
+    #     val_data["slot"] = all_data[tgt_domain]["slot"][:val_split]
+    #     val_data["domain"]  = [tgt_domain for _ in range(len(val_data["utter"]))]
+    #     val_data["label"] = all_data[tgt_domain]["label"][:val_split]
+
+    #     # the rest as test set
+    #     test_data["utter"] = all_data[tgt_domain]["utter"][val_split:]
+    #     test_data["slot"] = all_data[tgt_domain]["slot"][val_split:]
+    #     test_data["domain"] = [tgt_domain for _ in range(len(test_data["utter"]))]
+    #     test_data["label"] = all_data[tgt_domain]["label"][val_split:]
+
+    # else: # delete slot_exemplars_td_only because some of target domain data is added in train data
+    #     # first n samples as train set
+    #     train_data["utter"].extend(all_data[tgt_domain]["train"]["utter"][:train_split])
+    #     train_data["slot"].extend(all_data[tgt_domain]["train"]["slot"][:train_split])
+    #     train_data["domain"].extend([tgt_domain for _ in range(train_split)])
+    #     train_data["label"].extend(all_data[tgt_domain]["train"]["label"][:train_split])
+    #     train_data["template_list"].extend(all_data[tgt_domain]["train"]["template_list"][:train_split])
+
+    #     # from n to 500 samples as validation set
+    #     val_data["utter"] = all_data[tgt_domain]["utter"][train_split:val_split]  
+    #     val_data["slot"] = all_data[tgt_domain]["slot"][train_split:val_split]
+    #     val_data["domain"] = [tgt_domain for _ in range(len(val_data["utter"]))]
+    #     val_data["label"] = all_data[tgt_domain]["label"][train_split:val_split]
+
+    #     # the rest as test set (same as zero-shot)
+    #     test_data["utter"] = all_data[tgt_domain]["utter"][val_split:]
+    #     test_data["slot"] = all_data[tgt_domain]["slot"][val_split:]
+    #     test_data["domain"] = [tgt_domain for _ in range(len(test_data["utter"]))]
+    #     test_data["label"] = all_data[tgt_domain]["label"][val_split:]
 
     dataset_train = Dataset(tokenizer, 
                             train_data["utter"][:max_train_samples], 
@@ -251,7 +275,7 @@ def get_dataloader(tgt_domain, n_samples, data_path, num_augs, batch_size, max_t
                             train_data["label"][:max_train_samples], 
                             train_data["template_list"][:max_train_samples], 
                             train_data["slot_exemplars"],
-                            how_many_augs=num_augs
+                            key_data_type=key_enc_data
                             )
                             
     dataset_val = Dataset(tokenizer, 
@@ -259,7 +283,6 @@ def get_dataloader(tgt_domain, n_samples, data_path, num_augs, batch_size, max_t
                             val_data["slot"], 
                             val_data["domain"], 
                             val_data["label"],
-                            how_many_augs=num_augs
                             )
     
     dataset_test = Dataset(tokenizer, 
@@ -267,7 +290,6 @@ def get_dataloader(tgt_domain, n_samples, data_path, num_augs, batch_size, max_t
                             test_data["slot"], 
                             test_data["domain"], 
                             test_data["label"],
-                            how_many_augs=num_augs
                             )
 
     dataloader_train = DataLoader(dataset=dataset_train, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)

@@ -14,8 +14,17 @@ y1_set = ["O", "B", "I"]
 y2_set = ['O', 'B-playlist', 'I-playlist', 'B-music_item', 'I-music_item', 'B-geographic_poi', 'I-geographic_poi', 'B-facility', 'I-facility', 'B-movie_name', 'I-movie_name', 'B-location_name', 'I-location_name', 'B-restaurant_name', 'I-restaurant_name', 'B-track', 'I-track', 'B-restaurant_type', 'I-restaurant_type', 'B-object_part_of_series_type', 'I-object_part_of_series_type', 'B-country', 'I-country', 'B-service', 'I-service', 'B-poi', 'I-poi', 'B-party_size_description', 'I-party_size_description', 'B-served_dish', 'I-served_dish', 'B-genre',  'I-genre', 'B-current_location', 'I-current_location', 'B-object_select', 'I-object_select', 'B-album', 'I-album', 'B-object_name', 'I-object_name', 'B-state', 'I-state', 'B-sort', 'I-sort', 'B-object_location_type', 'I-object_location_type', 'B-movie_type', 'I-movie_type', 'B-spatial_relation', 'I-spatial_relation', 'B-artist', 'I-artist', 'B-cuisine', 'I-cuisine', 'B-entity_name', 'I-entity_name', 'B-object_type', 'I-object_type', 'B-playlist_owner', 'I-playlist_owner', 'B-timeRange', 'I-timeRange', 'B-city', 'I-city', 'B-rating_value', 'B-best_rating', 'B-rating_unit', 'B-year', 'B-party_size_number', 'B-condition_description', 'B-condition_temperature']
 domain_set = ["AddToPlaylist", "BookRestaurant", "GetWeather", "PlayMusic", "RateBook", "SearchCreativeWork", "SearchScreeningEvent"]
 slot_list = ['playlist', 'music_item', 'geographic_poi', 'facility', 'movie_name', 'location_name', 'restaurant_name', 'track', 'restaurant_type', 'object_part_of_series_type', 'country', 'service', 'poi', 'party_size_description', 'served_dish', 'genre', 'current_location', 'object_select', 'album', 'object_name', 'state', 'sort', 'object_location_type', 'movie_type', 'spatial_relation', 'artist', 'cuisine', 'entity_name', 'object_type', 'playlist_owner', 'timeRange', 'city', 'rating_value', 'best_rating', 'rating_unit', 'year', 'party_size_number', 'condition_description', 'condition_temperature']
+domain2slot = {
+    "AddToPlaylist": ['music_item', 'playlist_owner', 'entity_name', 'playlist', 'artist'],
+    "BookRestaurant": ['city', 'facility', 'timeRange', 'restaurant_name', 'country', 'cuisine', 'restaurant_type', 'served_dish', 'party_size_number', 'poi', 'sort', 'spatial_relation', 'state', 'party_size_description'],
+    "GetWeather": ['city', 'state', 'timeRange', 'current_location', 'country', 'spatial_relation', 'geographic_poi', 'condition_temperature', 'condition_description'],
+    "PlayMusic": ['genre', 'music_item', 'service', 'year', 'playlist', 'album','sort', 'track', 'artist'],
+    "RateBook": ['object_part_of_series_type', 'object_select', 'rating_value', 'object_name', 'object_type', 'rating_unit', 'best_rating'],
+    "SearchCreativeWork": ['object_name', 'object_type'],
+    "SearchScreeningEvent": ['timeRange', 'movie_type', 'object_location_type','object_type', 'location_name', 'spatial_relation', 'movie_name']
+}
 
-def make_syn_data(slot_dict, template_list, num_aug):
+def make_syn_data(slot_dict, template_list, num_aug=1):
     """
     합성 문장을 만드는 함수
     positive augmented data: 1
@@ -82,7 +91,7 @@ def log_params(json_dict, params):
     json_dict: dictionary, 
     params: list, list of params
     """
-    necessary_params = ['dataset_name', 'target_domain', 'n_samples', 'num_aug_data', 'loss_key_ratio', 'dropout_rate', 'learning_rate', 'max_steps', 'eval_steps', 'early_stopping_patience', 'per_device_train_batch_size', 'warmup_steps']
+    necessary_params = ['dataset_name', 'target_domain', 'n_samples', 'num_aug_data', 'key_enc_data', 'num_key_enc_data', 'loss_key_ratio', 'dropout_rate', 'learning_rate', 'max_steps', 'eval_steps', 'early_stopping_patience', 'per_device_train_batch_size', 'warmup_steps']
     json_dict['parameters'] = {}
 
     for param in params:

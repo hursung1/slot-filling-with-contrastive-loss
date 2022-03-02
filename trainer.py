@@ -66,10 +66,11 @@ def train(model,
 
         # evaluation
         if (i + 1) % eval_steps == 0:
-            result = eval(model, dataloader_val)
-            eval_f1 = result['fb1']
+            result = {}
+            eval_f1 = eval(model, dataloader_val)['fb1']
             print(f"Result(F1-Score) at step {i+1}: {eval_f1}")
             result['step'] = i + 1
+            result['f1-score'] = eval_f1
             log_dict['eval_results'].append(result)
 
             if eval_f1 > best_f1_score:
