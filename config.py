@@ -1,6 +1,7 @@
 from curses import meta
 from dataclasses import dataclass, field
 from email.policy import default
+from importlib.metadata import metadata
 from typing import Optional
 
 @dataclass
@@ -34,9 +35,17 @@ class ModelArguments:
         default="tem_aug",
         metadata={"help": "designate data for key encoder input (\"tem_only\", \"tem_aug\", \"aug_only\")"}
     )
+    use_both_or_not: bool = field(
+        default=True,
+        metadata={"help": "use template and aug_data both or not, this is only valid for key_enc_data = \"tem_aug\""}
+    )
     num_key_enc_data: int = field(
         default=3,
         metadata={"help": "number of data for key encoder input"}
+    )
+    num_aug: int = field(
+        default=1,
+        metadata={"help": "number of augmented data when training"}
     )
     loss_key_ratio: float = field(
         default=0.5,

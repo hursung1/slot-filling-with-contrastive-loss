@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 import random
 
 class Dataset(data.Dataset):
-    def __init__(self, tokenizer, utter, slot, domain, label, template_list=None, slot_exemplars=None, key_data_type="tem_only", label_pad_token_id=0):
+    def __init__(self, tokenizer, utter, slot, domain, label, template_list=None, slot_exemplars=None, key_data_type="tem_only", use_both_or_not=True, aug_num=1, label_pad_token_id=0):
         """
         how_many_augs: number of augmented data per a utterance생성할 augmented data의 개수
         utter: original utterance
@@ -28,6 +28,8 @@ class Dataset(data.Dataset):
             self.key_data_type = key_data_type
             self.slot_exemplars = slot_exemplars
             self.mode = "train"
+            self.use_both_or_not=use_both_or_not
+            self.aug_num = aug_num
         else:
             self.mode = "eval"
 
@@ -36,7 +38,7 @@ class Dataset(data.Dataset):
     def __getitem__(self, index):
         item = {}
         if self.mode == "train": # dataset mode "train": make synthetic data
-            aug_data = make_syn_data(self.slot_exemplars, self.template_list[index])
+            aug_data = make_syn_data(self.slot_exemplars, self.template_list[index], self.aug_num)
             key_input_data = []
             
             for i, (template, augmented) in enumerate(zip(self.template_list[index], aug_data)):
@@ -55,10 +57,20 @@ class Dataset(data.Dataset):
                 # select template or aug_data in probability=.5
                 if self.key_data_type == "tem_aug":
                     prob = random.random()
-                    if prob < 0.5:
-                        key_input_data.append(tem_emb)
+                    if self.use_both_or_not: # if use both: just add all except positive
+                        if i == 0:
+                            if prob < 0.5:
+                                key_input_data.append(tem_emb)
+                            else:
+                                key_input_data.append(aug_emb)
+                        else:
+                            key_input_data.append(tem_emb)
+                            key_input_data.append(aug_emb)
                     else:
-                        key_input_data.append(aug_emb)
+                        if prob < 0.5:
+                            key_input_data.append(tem_emb)
+                        else:
+                            key_input_data.append(aug_emb)
 
                 # use only template
                 elif self.key_data_type == "tem_only":
@@ -175,7 +187,7 @@ def collate_fn(features):
     return padded_features
 
 
-def get_dataloader(tgt_domain, n_samples, data_path, key_enc_data, num_key_enc_data, batch_size, max_train_samples=-1, tokenizer=None):
+def get_dataloader(tgt_domain, n_samples, data_path, key_enc_data, num_key_enc_data, batch_size, max_train_samples=-1, tokenizer=None, use_both_or_not=False, aug_num=1):
     """
     input
     ----------
@@ -275,7 +287,9 @@ def get_dataloader(tgt_domain, n_samples, data_path, key_enc_data, num_key_enc_d
                             train_data["label"][:max_train_samples], 
                             train_data["template_list"][:max_train_samples], 
                             train_data["slot_exemplars"],
-                            key_data_type=key_enc_data
+                            key_data_type=key_enc_data,
+                            use_both_or_not=use_both_or_not,
+                            aug_num=aug_num
                             )
                             
     dataset_val = Dataset(tokenizer, 

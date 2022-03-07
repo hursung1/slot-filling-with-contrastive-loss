@@ -48,7 +48,9 @@ def main():
                                             model_args.num_key_enc_data,
                                             training_args.per_device_train_batch_size, 
                                             data_args.max_train_samples, 
-                                            tokenizer)
+                                            tokenizer,
+                                            model_args.use_both_or_not,
+                                            model_args.num_aug)
 
     # loss function, optimizer, ...
     optim = AdamW(model.parameters(), lr=training_args.learning_rate, correct_bias=True)
