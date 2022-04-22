@@ -1,5 +1,6 @@
 # Cross Domain Slot Filling with Contrastive Loss
 
+* I refered the code of [Coach](https://github.com/zliucr/coach)
 * Data: [SNIPS Dataset](https://github.com/sonos/nlu-benchmark) preprocessed by [zliucr](https://github.com/zliucr/coach)
 * Download data from [here](https://drive.google.com/drive/folders/1ydalMtB-hpfS3SIEaR5UbRfEe2m8bFcj) and save it in <b>./data</b> diretory.
 
