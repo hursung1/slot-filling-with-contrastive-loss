@@ -9,9 +9,9 @@
     "overwrite_output_dir": true,
     "do_train": true,
     "do_eval": true,
-    "target_domain": "PlayMusic",
+    "target_domain": "SearchScreeningEvent",
     "n_samples": 0,
-    "loss_key_ratio": 0.7,
+    "loss_key_ratio": 0.5,
     "dropout_rate": 0.3,
 
     "warmup_steps": 4000,

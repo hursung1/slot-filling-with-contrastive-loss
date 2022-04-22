@@ -36,7 +36,7 @@ class ModelArguments:
         metadata={"help": "designate data for key encoder input (\"tem_only\", \"tem_aug\", \"aug_only\")"}
     )
     use_both_or_not: bool = field(
-        default=True,
+        default=False,
         metadata={"help": "use template and aug_data both or not, this is only valid for key_enc_data = \"tem_aug\""}
     )
     num_key_enc_data: int = field(

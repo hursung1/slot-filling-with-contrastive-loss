@@ -1,4 +1,4 @@
-from transformers import BertModel
+from transformers import BertModel, BertConfig
 from src.modules import CRF
 import torch
 from torch import nn
@@ -55,8 +55,11 @@ class SlotFillingModel(nn.Module):
             # self.key_bert_emb = torch.nn.Embedding(args.vocab_size, args.hidden_size, args.pad_token_id)
             # self.key_bert = torch.nn.LSTM(input_size=args.input_size, hidden_size=args.hidden_size)
         elif "bert" in args.model_name_or_path:
+            # config = BertConfig(hidden_size=256, num_hidden_layers=3, num_attention_heads=4, intermediate_size=1024)
+            # self.query_bert = BertModel(config=config)
             self.query_bert = BertModel.from_pretrained("bert-base-uncased")
 
+        # self.key_bert = BertModel(config=config)
         self.key_bert = BertModel.from_pretrained("bert-base-uncased")
         self.dropout = nn.Dropout(p=args.dropout_rate)
         self.classifier = nn.Linear(self.query_bert.config.hidden_size, self.num_tags)
@@ -114,11 +117,19 @@ class SlotFillingModel(nn.Module):
             batch_label = torch.tensor([0 for _ in range(query_batch_length)]).cuda()
 
             query_cls_output.unsqueeze_(1)
-            key_cls_output = torch.transpose(key_cls_output, 1, 2) # shape: (num_batch, bert_hidden_size, num_adaption_data)
+            # key_cls_output = torch.transpose(key_cls_output, 1, 2) # shape: (num_batch, bert_hidden_size, num_adaption_data)
 
-            query_key_mult = torch.bmm(query_cls_output, key_cls_output).squeeze(1)
+            # query_key_mult = torch.bmm(query_cls_output, key_cls_output).squeeze(1)
 
-            cl_loss = self.ce_loss(query_key_mult, batch_label)
+            # cl_loss = self.ce_loss(query_key_mult, batch_label)
+
+            # MSE
+            query_cls_output = torch.repeat_interleave(query_cls_output, key_per_query, dim=1)
+            diff = query_cls_output - key_cls_output
+            diff.square_()
+            diff = diff.sum(dim=2)
+            diff[:, 1:] *= -1
+            cl_loss = torch.sum(diff) 
             self.key_updated_cnt += 1
 
         return crf_loss, logits, cl_loss
