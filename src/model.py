@@ -117,19 +117,19 @@ class SlotFillingModel(nn.Module):
             batch_label = torch.tensor([0 for _ in range(query_batch_length)]).cuda()
 
             query_cls_output.unsqueeze_(1)
-            # key_cls_output = torch.transpose(key_cls_output, 1, 2) # shape: (num_batch, bert_hidden_size, num_adaption_data)
+            key_cls_output = torch.transpose(key_cls_output, 1, 2) # shape: (num_batch, bert_hidden_size, num_adaption_data)
 
-            # query_key_mult = torch.bmm(query_cls_output, key_cls_output).squeeze(1)
+            query_key_mult = torch.bmm(query_cls_output, key_cls_output).squeeze(1)
 
-            # cl_loss = self.ce_loss(query_key_mult, batch_label)
+            cl_loss = self.ce_loss(query_key_mult, batch_label)
 
             # MSE
-            query_cls_output = torch.repeat_interleave(query_cls_output, key_per_query, dim=1)
-            diff = query_cls_output - key_cls_output
-            diff.square_()
-            diff = diff.sum(dim=2)
-            diff[:, 1:] *= -1
-            cl_loss = torch.sum(diff) 
+#             query_cls_output = torch.repeat_interleave(query_cls_output, key_per_query, dim=1)
+#             diff = query_cls_output - key_cls_output
+#             diff.square_()
+#             diff = diff.sum(dim=2)
+#             diff[:, 1:] *= -1
+#             cl_loss = torch.sum(diff) 
             self.key_updated_cnt += 1
 
         return crf_loss, logits, cl_loss
